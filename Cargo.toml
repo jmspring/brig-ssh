@@ -1,0 +1,11 @@
+[package]
+name = "brig-ssh"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jim Spring <jim@salish.systems>"]
+description = "SSH gateway for Brig"
+license = "BSD-2-Clause"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

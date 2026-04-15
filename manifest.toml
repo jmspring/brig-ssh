@@ -1,0 +1,11 @@
+[skill]
+name = "ssh-gateway"
+description = "Bridge SSH sessions to Brig"
+kind = "declarative"
+
+[requires]
+network = []
+max_runtime = "300s"
+
+[persistent.socket]
+capabilities = ["submit_task", "read_status"]
