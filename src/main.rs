@@ -10,14 +10,14 @@ use std::io::{self, BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
 use std::process;
 
-const DEFAULT_SOCKET: &str = "/var/brig/sock/brig.sock";
-
 #[derive(Serialize)]
 struct BrigHello<'a> {
     #[serde(rename = "type")]
     msg_type: &'static str,
     name: &'a str,
     version: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    token: Option<&'a str>,
 }
 
 #[derive(Deserialize)]
@@ -58,21 +58,22 @@ struct BrigConnection {
 }
 
 impl BrigConnection {
-    fn connect(socket_path: &str, gateway_name: &str) -> Result<Self, String> {
+    fn connect(socket_path: &str, gateway_name: &str, token: Option<&str>) -> Result<Self, String> {
         let stream = UnixStream::connect(socket_path)
             .map_err(|e| format!("failed to connect to brig socket at {}: {}", socket_path, e))?;
         let writer = stream.try_clone()
             .map_err(|e| format!("failed to clone socket: {}", e))?;
         let mut conn = BrigConnection { reader: BufReader::new(stream), writer };
-        conn.handshake(gateway_name)?;
+        conn.handshake(gateway_name, token)?;
         Ok(conn)
     }
 
-    fn handshake(&mut self, gateway_name: &str) -> Result<(), String> {
+    fn handshake(&mut self, gateway_name: &str, token: Option<&str>) -> Result<(), String> {
         let hello = BrigHello {
             msg_type: "hello",
             name: gateway_name,
             version: "0.1.0",
+            token,
         };
         self.send(&hello)?;
         let welcome: BrigWelcome = self.recv()?;
@@ -139,8 +140,21 @@ fn build_session_key() -> String {
 }
 
 fn run() -> Result<(), String> {
-    let socket_path = env::var("BRIG_SOCKET").unwrap_or_else(|_| DEFAULT_SOCKET.to_string());
+    let socket_path = env::var("BRIG_SOCKET").unwrap_or_else(|_| {
+        let home = env::var("HOME").unwrap_or_else(|_| "/root".into());
+        let user_path = format!("{}/.brig/sock/brig.sock", home);
+        if std::path::Path::new(&user_path).exists() {
+            user_path
+        } else {
+            "/var/brig/sock/brig.sock".into()
+        }
+    });
     let gateway_name = env::var("BRIG_GATEWAY_NAME").unwrap_or_else(|_| "ssh-gateway".to_string());
+
+    let token = env::var("BRIG_TOKEN").ok();
+    if token.is_none() {
+        eprintln!("warning: BRIG_TOKEN not set — generate one with: brig token create ssh-gateway");
+    }
 
     // Get task: SSH_ORIGINAL_COMMAND (ForceCommand mode) or stdin
     let task = if let Ok(cmd) = env::var("SSH_ORIGINAL_COMMAND") {
@@ -162,13 +176,34 @@ fn run() -> Result<(), String> {
     let session = build_session_key();
     eprintln!("[{}] <- {}", session, task);
 
-    let mut brig = BrigConnection::connect(&socket_path, &gateway_name)?;
+    let mut brig = BrigConnection::connect(&socket_path, &gateway_name, token.as_deref())?;
     let response = brig.submit_task(&task, &session)?;
     println!("{}", response);
     Ok(())
 }
 
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--help" || a == "-h") {
+        eprintln!("brig-ssh — SSH gateway for Brig");
+        eprintln!();
+        eprintln!("Usage: brig-ssh");
+        eprintln!("  Reads a task from stdin or SSH_ORIGINAL_COMMAND,");
+        eprintln!("  submits to Brig via unix socket, prints response.");
+        eprintln!();
+        eprintln!("Environment variables:");
+        eprintln!("  BRIG_TOKEN            Brig IPC authentication token (required)");
+        eprintln!("  BRIG_SOCKET           Socket path (default: ~/.brig/sock/brig.sock)");
+        eprintln!("  BRIG_GATEWAY_NAME     Gateway name (default: ssh-gateway)");
+        eprintln!("  BRIG_SESSION_PREFIX   Session prefix (default: ssh)");
+        eprintln!("  BRIG_SSH_USER         User identifier (default: from SSH_CLIENT)");
+        std::process::exit(0);
+    }
+    if args.iter().any(|a| a == "--version" || a == "-V") {
+        println!("brig-ssh {}", env!("CARGO_PKG_VERSION"));
+        std::process::exit(0);
+    }
+
     if let Err(e) = run() {
         eprintln!("fatal: {}", e);
         process::exit(1);
