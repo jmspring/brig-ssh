@@ -1,9 +1,10 @@
 # Makefile for brig-ssh
 # Uses BSD make conventions. Run with `make` on FreeBSD.
 
+DESTDIR?=
 PREFIX?=	/usr/local
-BINDIR=		${PREFIX}/bin
-SHAREDIR=	${PREFIX}/share/brig
+BINDIR=		${DESTDIR}${PREFIX}/bin
+SHAREDIR=	${DESTDIR}${PREFIX}/share/brig
 
 CARGO?=		cargo
 CARGO_FLAGS=	--release

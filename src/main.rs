@@ -77,7 +77,7 @@ impl BrigConnection {
         let hello = BrigHello {
             msg_type: "hello",
             name: gateway_name,
-            version: "0.1.0",
+            version: env!("CARGO_PKG_VERSION"),
             token,
         };
         self.send(&hello)?;
