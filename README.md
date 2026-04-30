@@ -88,7 +88,7 @@ echo "what skills are available?" | BRIG_SOCKET=/tmp/brig.sock brig-ssh
 The gateway uses Brig's newline-delimited JSON protocol:
 
 ```
-→ {"type":"hello","name":"ssh-gateway","version":"0.1.3"}
+→ {"type":"hello","name":"ssh-gateway","version":"0.2.0"}
 ← {"type":"welcome","capabilities":["submit_task","read_status"]}
 → {"type":"task","content":"check disk usage","session":"ssh-192.168.1.5"}
 ← {"type":"status","skill":"shell","jail":"w-xxx","state":"running"}

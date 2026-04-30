@@ -36,7 +36,7 @@ No HTTP library (stdin/stdout only). No async runtime. No SSH library.
 Newline-delimited JSON over unix domain socket:
 
 ```
-→ {"type":"hello","name":"ssh-gateway","version":"0.1.3"}
+→ {"type":"hello","name":"ssh-gateway","version":"0.2.0"}
 ← {"type":"welcome","capabilities":["submit_task","read_status"]}
 → {"type":"task","content":"check disk usage","session":"ssh-192.168.1.5"}
 ← {"type":"status","skill":"shell","jail":"w-xxx","state":"running"}
