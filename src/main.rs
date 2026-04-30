@@ -277,7 +277,11 @@ fn main() {
         println!("  submits to Brig via unix socket, prints response.");
         println!();
         println!("Environment variables:");
-        println!("  BRIG_TOKEN            Brig IPC authentication token (required)");
+        println!("  BRIG_TOKEN            Pre-shared auth token (optional; recommended");
+        println!("                        for production). Without it, any process that");
+        println!("                        can reach the socket can submit tasks. The");
+        println!("                        daemon may reject unauthenticated connections.");
+        println!("                        Generate with: brig token create ssh-gateway");
         println!("  BRIG_SOCKET           Socket path (default: ~/.brig/sock/brig.sock)");
         println!("  BRIG_GATEWAY_NAME     Gateway name (default: ssh-gateway)");
         println!("  BRIG_SESSION_PREFIX   Session prefix (default: ssh)");

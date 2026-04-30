@@ -88,7 +88,7 @@ echo "what skills are available?" | BRIG_SOCKET=/tmp/brig.sock brig-ssh
 The gateway uses Brig's newline-delimited JSON protocol:
 
 ```
-→ {"type":"hello","name":"ssh-gateway","version":"0.2.0"}
+→ {"type":"hello","name":"ssh-gateway","version":"0.3.0"}
 ← {"type":"welcome","capabilities":["submit_task","read_status"]}
 → {"type":"task","content":"check disk usage","session":"ssh-192.168.1.5"}
 ← {"type":"status","skill":"shell","jail":"w-xxx","state":"running"}
@@ -99,7 +99,7 @@ The gateway uses Brig's newline-delimited JSON protocol:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `BRIG_TOKEN` | No | (none) | Pre-shared key for brig daemon auth. Optional but recommended for production. If unset, warning emitted but connection proceeds. Generate with `brig token create ssh-gateway`. |
+| `BRIG_TOKEN` | No | (none) | Pre-shared key for brig daemon auth. Optional but recommended for production. Without a token, any process that can reach the socket can submit tasks; the daemon may reject unauthenticated connections depending on its configuration. Generate with `brig token create ssh-gateway`. |
 | `BRIG_SOCKET` | No | `/var/brig/sock/brig.sock` | Path to Brig's unix socket |
 | `BRIG_GATEWAY_NAME` | No | `ssh-gateway` | Gateway identity for brig (audit/logging) |
 | `BRIG_SESSION_PREFIX` | No | `ssh` | Session key prefix (e.g., `ssh-{user}`) |
