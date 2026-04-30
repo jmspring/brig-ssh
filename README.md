@@ -99,6 +99,7 @@ The gateway uses Brig's newline-delimited JSON protocol:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
+| `BRIG_TOKEN` | No | (none) | Pre-shared key for brig daemon auth. Optional but recommended for production. If unset, warning emitted but connection proceeds. Generate with `brig token create ssh-gateway`. |
 | `BRIG_SOCKET` | No | `/var/brig/sock/brig.sock` | Path to Brig's unix socket |
 | `BRIG_GATEWAY_NAME` | No | `ssh-gateway` | Gateway identity for brig (audit/logging) |
 | `BRIG_SESSION_PREFIX` | No | `ssh` | Session key prefix (e.g., `ssh-{user}`) |

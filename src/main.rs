@@ -185,6 +185,13 @@ fn read_line_bounded(reader: &mut BufReader<UnixStream>, max_bytes: usize) -> Re
 /// Maximum size of a single JSON message from the brig socket (1 MB).
 const MAX_MESSAGE_BYTES: usize = 1_048_576;
 
+// sysexits.h exit codes
+const EX_USAGE: i32 = 64;      // bad command-line usage
+const EX_DATAERR: i32 = 65;    // malformed input data
+const EX_UNAVAILABLE: i32 = 69; // service unavailable (socket unreachable)
+const EX_TEMPFAIL: i32 = 75;   // temporary failure (transient errors)
+const EX_CONFIG: i32 = 78;     // configuration error
+
 fn build_session_key() -> String {
     let prefix = env::var("BRIG_SESSION_PREFIX").unwrap_or_else(|_| "ssh".to_string());
     // BRIG_SSH_USER, then source IP from SSH_CLIENT ("ip port port"), then "unknown"
@@ -240,21 +247,41 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
+/// Map an error message to a sysexits.h exit code.
+fn exit_code_for_error(err: &str) -> i32 {
+    if err.contains("Usage:") || err.contains("is empty") || err.contains("no task provided") {
+        EX_USAGE
+    } else if err.contains("failed to connect to brig socket") {
+        EX_UNAVAILABLE
+    } else if err.contains("failed to parse message") || err.contains("failed to serialize") {
+        EX_DATAERR
+    } else if err.contains("read error") || err.contains("connection closed")
+        || err.contains("failed to write to socket") || err.contains("brig error")
+        || err.contains("read timeout") || err.contains("byte limit")
+    {
+        EX_TEMPFAIL
+    } else if err.contains("does not grant") || err.contains("expected welcome") {
+        EX_CONFIG
+    } else {
+        1
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|a| a == "--help" || a == "-h") {
-        eprintln!("brig-ssh — SSH gateway for Brig");
-        eprintln!();
-        eprintln!("Usage: brig-ssh");
-        eprintln!("  Reads a task from stdin or SSH_ORIGINAL_COMMAND,");
-        eprintln!("  submits to Brig via unix socket, prints response.");
-        eprintln!();
-        eprintln!("Environment variables:");
-        eprintln!("  BRIG_TOKEN            Brig IPC authentication token (required)");
-        eprintln!("  BRIG_SOCKET           Socket path (default: ~/.brig/sock/brig.sock)");
-        eprintln!("  BRIG_GATEWAY_NAME     Gateway name (default: ssh-gateway)");
-        eprintln!("  BRIG_SESSION_PREFIX   Session prefix (default: ssh)");
-        eprintln!("  BRIG_SSH_USER         User identifier (default: from SSH_CLIENT)");
+        println!("brig-ssh — SSH gateway for Brig");
+        println!();
+        println!("Usage: brig-ssh");
+        println!("  Reads a task from stdin or SSH_ORIGINAL_COMMAND,");
+        println!("  submits to Brig via unix socket, prints response.");
+        println!();
+        println!("Environment variables:");
+        println!("  BRIG_TOKEN            Brig IPC authentication token (required)");
+        println!("  BRIG_SOCKET           Socket path (default: ~/.brig/sock/brig.sock)");
+        println!("  BRIG_GATEWAY_NAME     Gateway name (default: ssh-gateway)");
+        println!("  BRIG_SESSION_PREFIX   Session prefix (default: ssh)");
+        println!("  BRIG_SSH_USER         User identifier (default: from SSH_CLIENT)");
         std::process::exit(0);
     }
     if args.iter().any(|a| a == "--version" || a == "-V") {
@@ -264,6 +291,6 @@ fn main() {
 
     if let Err(e) = run() {
         eprintln!("fatal: {}", e);
-        process::exit(1);
+        process::exit(exit_code_for_error(&e));
     }
 }
